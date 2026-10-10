@@ -3,7 +3,7 @@
 
 A simple, no-setup habit tracker that runs entirely in your browser. Add habits, check them off each day, and watch your streaks grow.
 
-**Live demo:** https://avagracetrachta-cloud.github.io/habit-tracker/
+**Live demo:** (https://github.com/avagracetrachta-cloud/Habit-Tracker/blob/main/Run.Habit-Tracker.Here)
 
 ## Features
 
