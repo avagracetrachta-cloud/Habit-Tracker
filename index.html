@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Habit Tracker</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #1f2430; --muted: #6b7280;
+    --accent: #6c5ce7; --accent-soft: #ece9ff; --done: #22c55e; --border: #e5e7eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161d; --card: #1e212b; --text: #eceef4; --muted: #9aa1b2;
+      --accent: #8b7dff; --accent-soft: #2b2848; --done: #34d399; --border: #2e3240;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 1.8rem; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .progress-label { display: flex; justify-content: space-between; font-size: .9rem; color: var(--muted); margin-bottom: 8px; }
+  .bar { height: 10px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  form { display: flex; gap: 8px; margin-bottom: 14px; }
+  input[type=text] {
+    flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 1rem;
+  }
+  button {
+    border: 0; border-radius: 10px; padding: 12px 16px; font-size: 1rem; cursor: pointer;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .habit-head { display: flex; align-items: center; gap: 10px; }
+  .habit-name { flex: 1; font-weight: 600; font-size: 1.05rem; word-break: break-word; }
+  .streak { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+  .today-btn {
+    background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: .9rem;
+  }
+  .today-btn.done { background: var(--done); color: #fff; }
+  .del { background: transparent; color: var(--muted); padding: 6px 8px; font-size: 1.1rem; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
+  .day {
+    text-align: center; font-size: .72rem; color: var(--muted); background: transparent;
+    padding: 0; font-weight: 500;
+  }
+  .day .box {
+    margin-top: 4px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 1rem; color: transparent;
+  }
+  .day.done .box { background: var(--done); border-color: var(--done); color: #fff; }
+  .day.today .box { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .empty { text-align: center; color: var(--muted); padding: 28px 0; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Habit Tracker</h1>
+  <p class="sub" id="today-label"></p>
+
+  <div class="card">
+    <div class="progress-label"><span>Today's progress</span><span id="progress-text">0 / 0</span></div>
+    <div class="bar"><div id="progress-bar"></div></div>
+  </div>
+
+  <form id="add-form">
+    <input type="text" id="habit-input" placeholder="Add a habit (e.g. Study 1 hour, Walk, Read)" maxlength="60" required />
+    <button type="submit">Add</button>
+  </form>
+
+  <div id="habits"></div>
+
+  <footer>Saved in your browser. No account, no server.</footer>
+</main>
+
+<script>
+const KEY = "habit-tracker-v1";
+let habits = load();
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+  catch { return []; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(habits)); } catch {}
+}
+
+// Dates as local YYYY-MM-DD strings
+function fmt(d) {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+function streak(habit) {
+  let n = 0;
+  // If today isn't done yet, the streak can still be alive from yesterday
+  let offset = habit.done[fmt(new Date())] ? 0 : 1;
+  while (habit.done[fmt(daysAgo(offset))]) { n++; offset++; }
+  return n;
+}
+
+function addHabit(name) {
+  habits.push({ id: Date.now(), name: name.trim(), done: {} });
+  save(); render();
+}
+function toggle(id, dateStr) {
+  const h = habits.find(h => h.id === id);
+  if (!h) return;
+  if (h.done[dateStr]) delete h.done[dateStr]; else h.done[dateStr] = true;
+  save(); render();
+}
+function remove(id) {
+  const h = habits.find(h => h.id === id);
+  if (h && confirm(`Delete "${h.name}" and its history?`)) {
+    habits = habits.filter(h => h.id !== id);
+    save(); render();
+  }
+}
+
+function render() {
+  const todayStr = fmt(new Date());
+  document.getElementById("today-label").textContent =
+    new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+  const doneToday = habits.filter(h => h.done[todayStr]).length;
+  document.getElementById("progress-text").textContent = `${doneToday} / ${habits.length}`;
+  document.getElementById("progress-bar").style.width =
+    habits.length ? `${(doneToday / habits.length) * 100}%` : "0%";
+
+  const root = document.getElementById("habits");
+  root.innerHTML = "";
+
+  if (!habits.length) {
+    root.innerHTML = '<div class="empty">No habits yet. Add your first one above.</div>';
+    return;
+  }
+
+  for (const h of habits) {
+    const s = streak(h);
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const head = document.createElement("div");
+    head.className = "habit-head";
+
+    const name = document.createElement("div");
+    name.className = "habit-name";
+    name.textContent = h.name; // textContent avoids HTML injection
+
+    const st = document.createElement("div");
+    st.className = "streak";
+    st.textContent = s ? `${s} day${s > 1 ? "s" : ""} streak` : "No streak yet";
+
+    const btn = document.createElement("button");
+    const isDone = !!h.done[todayStr];
+    btn.className = "today-btn" + (isDone ? " done" : "");
+    btn.textContent = isDone ? "✓ Done" : "Mark done";
+    btn.onclick = () => toggle(h.id, todayStr);
+
+    const del = document.createElement("button");
+    del.className = "del";
+    del.title = "Delete habit";
+    del.textContent = "✕";
+    del.onclick = () => remove(h.id);
+
+    head.append(name, st, btn, del);
+
+    const week = document.createElement("div");
+    week.className = "week";
+    for (let i = 6; i >= 0; i--) {
+      const d = daysAgo(i);
+      const ds = fmt(d);
+      const cell = document.createElement("button");
+      cell.className = "day" + (h.done[ds] ? " done" : "") + (i === 0 ? " today" : "");
+      cell.title = "Click to toggle " + ds;
+      cell.innerHTML = `${d.toLocaleDateString(undefined, { weekday: "short" })}<div class="box">✓</div>`;
+      cell.onclick = () => toggle(h.id, ds);
+      week.appendChild(cell);
+    }
+
+    card.append(head, week);
+    root.appendChild(card);
+  }
+}
+
+document.getElementById("add-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = document.getElementById("habit-input");
+  if (input.value.trim()) addHabit(input.value);
+  input.value = "";
+});
+
+render();
+</script>
+</body>
+</html>
