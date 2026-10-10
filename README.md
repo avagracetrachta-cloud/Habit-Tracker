@@ -19,13 +19,6 @@ A simple, no-setup habit tracker that runs entirely in your browser. Add habits,
 
 Download or clone the repo and double-click `index.html`. That's it. There's nothing to install.
 
-## Host it free with GitHub Pages
-
-1. Push this repo to GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, set **Source** to **Deploy from a branch**, pick `main` and `/ (root)`, then **Save**.
-4. After a minute, your live link appears at the top of that page.
-
 ## Built with
 
 Plain HTML, CSS, and JavaScript. One file, no libraries.
@@ -36,4 +29,4 @@ Plain HTML, CSS, and JavaScript. One file, no libraries.
 - Export/import your data as a file
 - Habit categories (study, health, social)
 - Reminders or a "best streak" record
-- Tie it to cognitive science: track sleep or focus and look for patterns
+
